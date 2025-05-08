@@ -1,0 +1,6 @@
+# Configuración de la base de datos - PLANTILLA
+# Renombra este archivo a config.properties y ajusta los valores
+
+db.url=jdbc:mysql://localhost:3306/biblioteca
+db.user=usuario
+db.password=contraseña

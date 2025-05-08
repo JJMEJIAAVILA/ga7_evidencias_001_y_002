@@ -1,4 +1,3 @@
-// Modelo base: ElementoBiblioteca.java
 package com.biblioteca.model;
 
 public abstract class ElementoBiblioteca {

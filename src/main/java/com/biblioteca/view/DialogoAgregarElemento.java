@@ -1,396 +1,191 @@
 package com.biblioteca.view;
 
 import com.biblioteca.model.DVD;
-import com.biblioteca.model.ElementoBiblioteca;
 import com.biblioteca.model.Libro;
 import com.biblioteca.model.Revista;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 
 public class DialogoAgregarElemento extends JDialog {
-    private MainFrame parent;
-    private String tipoElemento;
-    private ElementoBiblioteca elementoExistente;
-    private ElementoBiblioteca resultado;
-
-    // Campos comunes
-    private JTextField txtTitulo;
-    private JTextField txtAutor;
-    private JSpinner spnAno;
-
-    // Campos específicos de Libro
-    private JTextField txtISBN;
-    private JSpinner spnPaginas;
-    private JTextField txtGeneroLibro;
-    private JTextField txtEditorial;
-
-    // Campos específicos de Revista
-    private JSpinner spnEdicion;
-    private JTextField txtCategoria;
-
-    // Campos específicos de DVD
-    private JSpinner spnDuracion;
-    private JTextField txtGeneroDVD;
-
-    // Botones
-    private JButton btnAceptar;
+    private JPanel panelCampos;
+    private JPanel panelBotones;
+    private JButton btnGuardar;
     private JButton btnCancelar;
+    private Map<String, JTextField> campos;
+    private Object resultado;
+    private String tipoElemento;
+    private Object elementoAEditar;
 
-    public DialogoAgregarElemento(MainFrame parent, String titulo, String tipoElemento) {
-        this(parent, titulo, tipoElemento, null);
-    }
-
-    public DialogoAgregarElemento(MainFrame parent, String titulo, String tipoElemento, ElementoBiblioteca elementoExistente) {
+    public DialogoAgregarElemento(JFrame parent, String titulo, String tipo) {
         super(parent, titulo, true);
-        this.parent = parent;
-        this.tipoElemento = tipoElemento;
-        this.elementoExistente = elementoExistente;
-
-        inicializarComponentes();
-        configurarVentana();
+        this.tipoElemento = tipo;
+        this.elementoAEditar = null;
+        inicializar();
     }
 
-    private void inicializarComponentes() {
-        // Panel principal con GridBagLayout para mayor flexibilidad
-        JPanel panel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+    public DialogoAgregarElemento(JFrame parent, String titulo, String tipo, Object elemento) {
+        super(parent, titulo, true);
+        this.tipoElemento = tipo;
+        this.elementoAEditar = elemento;
+        inicializar();
+        llenarCamposParaEditar();
+    }
 
-        // Inicializar campos comunes
-        JLabel lblTitulo = new JLabel("Título:");
-        txtTitulo = new JTextField(30);
+    private void inicializar() {
+        setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout());
 
-        JLabel lblAutor = new JLabel("Autor:");
-        txtAutor = new JTextField(30);
+        panelCampos = new JPanel(new GridLayout(0, 2, 5, 5));
+        panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        campos = new HashMap<>();
 
-        JLabel lblAno = new JLabel("Año:");
-        int anoActual = Calendar.getInstance().get(Calendar.YEAR);
-        spnAno = new JSpinner(new SpinnerNumberModel(anoActual, 1900, anoActual, 1));
+        crearCampos();
 
-        // Agregar campos comunes
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        panel.add(lblTitulo, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridwidth = 2;
-        panel.add(txtTitulo, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.gridwidth = 1;
-        panel.add(lblAutor, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridwidth = 2;
-        panel.add(txtAutor, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.gridwidth = 1;
-        panel.add(lblAno, gbc);
-
-        gbc.gridx = 1;
-        panel.add(spnAno, gbc);
-
-        // Agregar campos específicos según el tipo de elemento
-        int row = 3;
-
-        if (tipoElemento.equals("LIBRO")) {
-            agregarCamposLibro(panel, gbc, row);
-        } else if (tipoElemento.equals("REVISTA")) {
-            agregarCamposRevista(panel, gbc, row);
-        } else if (tipoElemento.equals("DVD")) {
-            agregarCamposDVD(panel, gbc, row);
-        }
-
-        // Panel de botones
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-
-        btnAceptar = new JButton("Aceptar");
+        btnGuardar = new JButton("Guardar");
         btnCancelar = new JButton("Cancelar");
 
-        panelBotones.add(btnAceptar);
+        btnGuardar.addActionListener(e -> guardarDatos());
+        btnCancelar.addActionListener(e -> cancelar());
+
+        panelBotones.add(btnGuardar);
         panelBotones.add(btnCancelar);
 
-        // Configurar acciones de botones
-        btnAceptar.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (validarCampos()) {
-                    guardarDatos();
-                    dispose();
-                }
-            }
-        });
+        add(panelCampos, BorderLayout.CENTER);
+        add(panelBotones, BorderLayout.SOUTH);
 
-        btnCancelar.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                resultado = null;
-                dispose();
-            }
-        });
-
-        // Panel principal
-        JPanel panelPrincipal = new JPanel(new BorderLayout());
-        panelPrincipal.add(panel, BorderLayout.CENTER);
-        panelPrincipal.add(panelBotones, BorderLayout.SOUTH);
-        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        // Cargar datos si es edición
-        if (elementoExistente != null) {
-            cargarDatosElemento();
-        }
-
-        setContentPane(panelPrincipal);
+        pack();
+        setLocationRelativeTo(getParent());
     }
 
-    private void agregarCamposLibro(JPanel panel, GridBagConstraints gbc, int row) {
-        JLabel lblISBN = new JLabel("ISBN:");
-        txtISBN = new JTextField(20);
-
-        JLabel lblPaginas = new JLabel("Páginas:");
-        spnPaginas = new JSpinner(new SpinnerNumberModel(100, 1, 9999, 1));
-
-        JLabel lblGenero = new JLabel("Género:");
-        txtGeneroLibro = new JTextField(20);
-
-        JLabel lblEditorial = new JLabel("Editorial:");
-        txtEditorial = new JTextField(20);
-
-        // Agregar campos
-        gbc.gridx = 0;
-        gbc.gridy = row++;
-        panel.add(lblISBN, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridwidth = 2;
-        panel.add(txtISBN, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = row++;
-        gbc.gridwidth = 1;
-        panel.add(lblPaginas, gbc);
-
-        gbc.gridx = 1;
-        panel.add(spnPaginas, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = row++;
-        panel.add(lblGenero, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridwidth = 2;
-        panel.add(txtGeneroLibro, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.gridwidth = 1;
-        panel.add(lblEditorial, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridwidth = 2;
-        panel.add(txtEditorial, gbc);
-    }
-
-    private void agregarCamposRevista(JPanel panel, GridBagConstraints gbc, int row) {
-        JLabel lblEdicion = new JLabel("Edición:");
-        spnEdicion = new JSpinner(new SpinnerNumberModel(1, 1, 9999, 1));
-
-        JLabel lblCategoria = new JLabel("Categoría:");
-        txtCategoria = new JTextField(20);
-
-        // Agregar campos
-        gbc.gridx = 0;
-        gbc.gridy = row++;
-        panel.add(lblEdicion, gbc);
-
-        gbc.gridx = 1;
-        panel.add(spnEdicion, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        panel.add(lblCategoria, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridwidth = 2;
-        panel.add(txtCategoria, gbc);
-    }
-
-    private void agregarCamposDVD(JPanel panel, GridBagConstraints gbc, int row) {
-        JLabel lblDuracion = new JLabel("Duración (min):");
-        spnDuracion = new JSpinner(new SpinnerNumberModel(90, 1, 999, 1));
-
-        JLabel lblGenero = new JLabel("Género:");
-        txtGeneroDVD = new JTextField(20);
-
-        // Agregar campos
-        gbc.gridx = 0;
-        gbc.gridy = row++;
-        panel.add(lblDuracion, gbc);
-
-        gbc.gridx = 1;
-        panel.add(spnDuracion, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        panel.add(lblGenero, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridwidth = 2;
-        panel.add(txtGeneroDVD, gbc);
-    }
-
-    private void cargarDatosElemento() {
-        // Cargar datos comunes
-        txtTitulo.setText(elementoExistente.getTitulo());
-        txtAutor.setText(elementoExistente.getAutor());
-        spnAno.setValue(elementoExistente.getAnoPublicacion());
-
-        // Cargar datos específicos según el tipo
-        if (elementoExistente instanceof Libro) {
-            Libro libro = (Libro) elementoExistente;
-            txtISBN.setText(libro.getIsbn());
-            spnPaginas.setValue(libro.getNumeroPaginas());
-            txtGeneroLibro.setText(libro.getGenero());
-            txtEditorial.setText(libro.getEditorial());
-        } else if (elementoExistente instanceof Revista) {
-            Revista revista = (Revista) elementoExistente;
-            spnEdicion.setValue(revista.getNumeroEdicion());
-            txtCategoria.setText(revista.getCategoria());
-        } else if (elementoExistente instanceof DVD) {
-            DVD dvd = (DVD) elementoExistente;
-            spnDuracion.setValue(dvd.getDuracion());
-            txtGeneroDVD.setText(dvd.getGenero());
+    private void crearCampos() {
+        switch (tipoElemento) {
+            case "LIBRO":
+                crearCampo("Título:");
+                crearCampo("Autor:");
+                crearCampo("Año:");
+                crearCampo("ISBN:");
+                crearCampo("Páginas:");
+                crearCampo("Género:");
+                crearCampo("Editorial:");
+                break;
+            case "DVD":
+                crearCampo("Título:");
+                crearCampo("Autor:");
+                crearCampo("Año:");
+                crearCampo("Duración:");
+                crearCampo("Género:");
+                break;
+            case "REVISTA":
+                crearCampo("Título:");
+                crearCampo("Autor:");
+                crearCampo("Año:");
+                crearCampo("Edición:");
+                crearCampo("Categoría:");
+                break;
         }
     }
 
-    private boolean validarCampos() {
-        // Validar campos comunes
-        if (txtTitulo.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "El título no puede estar vacío",
-                    "Error de validación", JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
+    private void crearCampo(String etiqueta) {
+        JLabel label = new JLabel(etiqueta);
+        JTextField textField = new JTextField(20);
+        panelCampos.add(label);
+        panelCampos.add(textField);
+        campos.put(etiqueta.replace(":", ""), textField);
+    }
 
-        if (txtAutor.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "El autor no puede estar vacío",
-                    "Error de validación", JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-
-        // Validar campos específicos según el tipo
-        if (tipoElemento.equals("LIBRO")) {
-            if (txtISBN.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "El ISBN no puede estar vacío",
-                        "Error de validación", JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-            if (txtGeneroLibro.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "El género no puede estar vacío",
-                        "Error de validación", JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-            if (txtEditorial.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "La editorial no puede estar vacía",
-                        "Error de validación", JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-        } else if (tipoElemento.equals("REVISTA")) {
-            if (txtCategoria.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "La categoría no puede estar vacía",
-                        "Error de validación", JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-        } else if (tipoElemento.equals("DVD")) {
-            if (txtGeneroDVD.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "El género no puede estar vacío",
-                        "Error de validación", JOptionPane.ERROR_MESSAGE);
-                return false;
+    private void llenarCamposParaEditar() {
+        if (elementoAEditar != null) {
+            switch (tipoElemento) {
+                case "LIBRO":
+                    Libro libro = (Libro) elementoAEditar;
+                    campos.get("Título").setText(libro.getTitulo());
+                    campos.get("Autor").setText(libro.getAutor());
+                    campos.get("Año").setText(String.valueOf(libro.getAnoPublicacion()));
+                    campos.get("ISBN").setText(libro.getIsbn());
+                    campos.get("Páginas").setText(String.valueOf(libro.getNumeroPaginas()));
+                    campos.get("Género").setText(libro.getGenero());
+                    campos.get("Editorial").setText(libro.getEditorial());
+                    break;
+                case "DVD":
+                    DVD dvd = (DVD) elementoAEditar;
+                    campos.get("Título").setText(dvd.getTitulo());
+                    campos.get("Autor").setText(dvd.getAutor());
+                    campos.get("Año").setText(String.valueOf(dvd.getAnoPublicacion()));
+                    campos.get("Duración").setText(String.valueOf(dvd.getDuracion()));
+                    campos.get("Género").setText(dvd.getGenero());
+                    break;
+                case "REVISTA":
+                    Revista revista = (Revista) elementoAEditar;
+                    campos.get("Título").setText(revista.getTitulo());
+                    campos.get("Autor").setText(revista.getAutor());
+                    campos.get("Año").setText(String.valueOf(revista.getAnoPublicacion()));
+                    campos.get("Edición").setText(String.valueOf(revista.getNumeroEdicion()));
+                    campos.get("Categoría").setText(revista.getCategoria());
+                    break;
             }
         }
-
-        return true;
     }
 
     private void guardarDatos() {
-        String titulo = txtTitulo.getText().trim();
-        String autor = txtAutor.getText().trim();
-        int ano = (int) spnAno.getValue();
-
-        // Crear objeto según tipo y si es edición o creación
-        if (tipoElemento.equals("LIBRO")) {
-            String isbn = txtISBN.getText().trim();
-            int paginas = (int) spnPaginas.getValue();
-            String genero = txtGeneroLibro.getText().trim();
-            String editorial = txtEditorial.getText().trim();
-
-            if (elementoExistente != null) {
-                Libro libro = (Libro) elementoExistente;
-                libro.setTitulo(titulo);
-                libro.setAutor(autor);
-                libro.setAnoPublicacion(ano);
-                libro.setIsbn(isbn);
-                libro.setNumeroPaginas(paginas);
-                libro.setGenero(genero);
-                libro.setEditorial(editorial);
-                resultado = libro;
-            } else {
-                resultado = new Libro(titulo, autor, ano, isbn, paginas, genero, editorial);
+        try {
+            switch (tipoElemento) {
+                case "LIBRO":
+                    String tituloLibro = campos.get("Título").getText();
+                    String autorLibro = campos.get("Autor").getText();
+                    int anoLibro = Integer.parseInt(campos.get("Año").getText());
+                    String isbnLibro = campos.get("ISBN").getText();
+                    int paginasLibro = Integer.parseInt(campos.get("Páginas").getText());
+                    String generoLibro = campos.get("Género").getText();
+                    String editorialLibro = campos.get("Editorial").getText();
+                    if (elementoAEditar instanceof Libro) {
+                        Libro libroExistente = (Libro) elementoAEditar;
+                        resultado = new Libro(libroExistente.getId(), tituloLibro, autorLibro, anoLibro, isbnLibro, paginasLibro, generoLibro, editorialLibro);
+                    } else {
+                        resultado = new Libro(tituloLibro, autorLibro, anoLibro, isbnLibro, paginasLibro, generoLibro, editorialLibro);
+                    }
+                    break;
+                case "DVD":
+                    String tituloDVD = campos.get("Título").getText();
+                    String autorDVD = campos.get("Autor").getText();
+                    int anoDVD = Integer.parseInt(campos.get("Año").getText());
+                    int duracionDVD = Integer.parseInt(campos.get("Duración").getText());
+                    String generoDVD = campos.get("Género").getText();
+                    if (elementoAEditar instanceof DVD) {
+                        DVD dvdExistente = (DVD) elementoAEditar;
+                        resultado = new DVD(dvdExistente.getId(), tituloDVD, autorDVD, anoDVD, duracionDVD, generoDVD);
+                    } else {
+                        resultado = new DVD(tituloDVD, autorDVD, anoDVD, duracionDVD, generoDVD);
+                    }
+                    break;
+                case "REVISTA":
+                    String tituloRevista = campos.get("Título").getText();
+                    String autorRevista = campos.get("Autor").getText();
+                    int anoRevista = Integer.parseInt(campos.get("Año").getText());
+                    int edicionRevista = Integer.parseInt(campos.get("Edición").getText());
+                    String categoriaRevista = campos.get("Categoría").getText();
+                    if (elementoAEditar instanceof Revista) {
+                        Revista revistaExistente = (Revista) elementoAEditar;
+                        resultado = new Revista(revistaExistente.getId(), tituloRevista, autorRevista, anoRevista, edicionRevista, categoriaRevista);
+                    } else {
+                        resultado = new Revista(tituloRevista, autorRevista, anoRevista, edicionRevista, categoriaRevista);
+                    }
+                    break;
             }
-        } else if (tipoElemento.equals("REVISTA")) {
-            int edicion = (int) spnEdicion.getValue();
-            String categoria = txtCategoria.getText().trim();
-
-            if (elementoExistente != null) {
-                Revista revista = (Revista) elementoExistente;
-                revista.setTitulo(titulo);
-                revista.setAutor(autor);
-                revista.setAnoPublicacion(ano);
-                revista.setNumeroEdicion(edicion);
-                revista.setCategoria(categoria);
-                resultado = revista;
-            } else {
-                resultado = new Revista(titulo, autor, ano, edicion, categoria);
-            }
-        } else if (tipoElemento.equals("DVD")) {
-            int duracion = (int) spnDuracion.getValue();
-            String genero = txtGeneroDVD.getText().trim();
-
-            if (elementoExistente != null) {
-                DVD dvd = (DVD) elementoExistente;
-                dvd.setTitulo(titulo);
-                dvd.setAutor(autor);
-                dvd.setAnoPublicacion(ano);
-                dvd.setDuracion(duracion);
-                dvd.setGenero(genero);
-                resultado = dvd;
-            } else {
-                resultado = new DVD(titulo, autor, ano, duracion, genero);
-            }
+            dispose();
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Por favor, ingrese números válidos para el año y la duración/páginas/edición.", "Error de formato", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private void configurarVentana() {
-        pack();
-        setResizable(false);
-        setLocationRelativeTo(parent);
+    private void cancelar() {
+        resultado = null;
+        dispose();
     }
 
-    public ElementoBiblioteca mostrar() {
+    public Object mostrar() {
         setVisible(true);
         return resultado;
     }

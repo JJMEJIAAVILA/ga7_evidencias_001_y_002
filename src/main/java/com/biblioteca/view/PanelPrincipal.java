@@ -1,6 +1,7 @@
 package com.biblioteca.view;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.sql.SQLException;
 
@@ -19,9 +20,18 @@ public class PanelPrincipal extends JPanel {
 
     private JToolBar toolBar;
 
+    // Colores personalizados
+    private Color colorPrimario = new Color(59, 89, 152); // Azul oscuro
+    private Color colorTextoPrincipal = Color.BLACK;
+    private Color colorTextoSecundario = Color.DARK_GRAY;
+    private Font fuentePrincipal = new Font("Arial", Font.PLAIN, 14);
+    private Font fuenteTitulos = new Font("Arial", Font.BOLD, 16);
+    private Color colorFondoPanel = Color.WHITE;
+
     public PanelPrincipal(MainFrame parent) throws SQLException {
         this.parent = parent;
         setLayout(new BorderLayout());
+        setBackground(colorFondoPanel);
 
         inicializarToolBar();
         inicializarPaneles();
@@ -30,27 +40,41 @@ public class PanelPrincipal extends JPanel {
     private void inicializarToolBar() {
         toolBar = new JToolBar();
         toolBar.setFloatable(false);
+        toolBar.setBackground(colorPrimario);
+        toolBar.setForeground(Color.WHITE);
+        toolBar.setBorder(new EmptyBorder(5, 10, 5, 10));
 
-        JButton btnLibros = new JButton("Libros");
-        JButton btnRevistas = new JButton("Revistas");
-        JButton btnDVDs = new JButton("DVDs");
+        JButton btnLibros = crearBotonToolBar("Libros");
+        JButton btnRevistas = crearBotonToolBar("Revistas");
+        JButton btnDVDs = crearBotonToolBar("DVDs");
 
         btnLibros.addActionListener(e -> mostrarPanelLibros());
         btnRevistas.addActionListener(e -> mostrarPanelRevistas());
         btnDVDs.addActionListener(e -> mostrarPanelDVDs());
 
         toolBar.add(btnLibros);
-        toolBar.add(new JToolBar.Separator());
+        toolBar.add(new JToolBar.Separator(new Dimension(10, 0))); // Separador con espacio
         toolBar.add(btnRevistas);
-        toolBar.add(new JToolBar.Separator());
+        toolBar.add(new JToolBar.Separator(new Dimension(10, 0)));
         toolBar.add(btnDVDs);
 
         add(toolBar, BorderLayout.NORTH);
     }
 
+    private JButton crearBotonToolBar(String texto) {
+        JButton boton = new JButton(texto);
+        boton.setForeground(Color.WHITE);
+        boton.setBackground(colorPrimario);
+        boton.setFont(fuentePrincipal);
+        boton.setFocusPainted(false);
+        boton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        return boton;
+    }
+
     private void inicializarPaneles() {
         cardLayout = new CardLayout();
         contenedor = new JPanel(cardLayout);
+        contenedor.setBackground(colorFondoPanel);
 
         try {
             panelLibros = new PanelLibros(parent);
@@ -61,15 +85,20 @@ public class PanelPrincipal extends JPanel {
             contenedor.add(panelRevistas, "REVISTAS");
             contenedor.add(panelDVDs, "DVDS");
 
-            // Panel de bienvenida
+            // Panel de bienvenida con estilos
             JPanel panelBienvenida = new JPanel(new BorderLayout());
+            panelBienvenida.setBackground(colorFondoPanel);
             JLabel lblBienvenida = new JLabel("Bienvenido al Sistema de Biblioteca", JLabel.CENTER);
-            lblBienvenida.setFont(new Font("Arial", Font.BOLD, 24));
+            lblBienvenida.setFont(new Font("Arial", Font.BOLD, 28));
+            lblBienvenida.setForeground(colorPrimario);
 
             JLabel lblInstrucciones = new JLabel("<html><center>Seleccione una opción en la barra de herramientas<br>para gestionar los elementos de la biblioteca.</center></html>", JLabel.CENTER);
+            lblInstrucciones.setFont(fuentePrincipal);
+            lblInstrucciones.setForeground(colorTextoSecundario);
 
             panelBienvenida.add(lblBienvenida, BorderLayout.CENTER);
             panelBienvenida.add(lblInstrucciones, BorderLayout.SOUTH);
+            panelBienvenida.setBorder(new EmptyBorder(50, 50, 50, 50)); // Margen para el panel de bienvenida
 
             contenedor.add(panelBienvenida, "BIENVENIDA");
 
